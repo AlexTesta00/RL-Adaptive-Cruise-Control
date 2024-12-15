@@ -75,5 +75,11 @@ def __setup_spectactor(spectator, spawn_point: carla.Transform):
         spectator.set_transform(spawn_point)
         time.sleep(10)
 
+def setup_carla_client(port=2000, name='localhost', timeout=100.0):
+    client = carla.Client(name, port)
+    client.set_timeout(timeout)
+    world = client.get_world()
+    return client, world
+
 def compute_security_distance(velocity):
     return (velocity // 10) ** 2
