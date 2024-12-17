@@ -10,7 +10,7 @@ import debug_utility
 
 class CruiseControlEnv(gym.Env):
 
-    MAX_STEPS = 2048
+    MAX_STEPS = 1024
     SPAWN_POINT = carla.Transform(carla.Location(x=2388, y=6164, z=178), carla.Rotation(yaw = -88.2))
     VEHICLE_BP = 'vehicle.tesla.model3'
     
@@ -54,11 +54,11 @@ class CruiseControlEnv(gym.Env):
     def __compute_reward(self, action):
         current_speed = self.ego_vehicle.get_velocity().length()
         desired_speed = self.target_speed
-        tolerance = 0.5  # 5% tolerance around the desired speed
+        tolerance = 0.2  # 5% tolerance around the desired speed
         reward = 0
 
         if not desired_speed - tolerance <= current_speed <= desired_speed + tolerance:
-            reward -= (desired_speed - current_speed) / desired_speed
+            reward -= abs(desired_speed - current_speed) / desired_speed
         else:
             reward += 1
 

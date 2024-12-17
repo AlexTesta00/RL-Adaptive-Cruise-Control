@@ -18,8 +18,8 @@ model = PPO(
     verbose=0,
     gamma=0.99,
     learning_rate=0.00001,
-    batch_size=128,
-    n_steps=2048,
+    batch_size=64,
+    n_steps=1024,
     n_epochs=500,
     ent_coef=0.01,
     seed=42,
@@ -31,7 +31,7 @@ callback = EvalCallback(env, best_model_save_path='./',
 
 
 # Train the PPO model
-model.learn(total_timesteps=2048 * 500, callback=callback, progress_bar=True, log_interval=1, tb_log_name="Ego spawned at target velocity")
+model.learn(total_timesteps=1024 * 500, callback=callback, progress_bar=True, log_interval=1, tb_log_name="Ego spawned at target velocity minor batch and total time step")
 
 # Save the final model
 model.save("ppo_carla_model")
