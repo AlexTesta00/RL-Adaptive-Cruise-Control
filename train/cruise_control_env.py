@@ -54,7 +54,7 @@ class CruiseControlEnv(gym.Env):
     def __compute_reward(self, action):
         current_speed = self.ego_vehicle.get_velocity().length()
         desired_speed = self.target_speed
-        tolerance = 0.2  # 5% tolerance around the desired speed
+        tolerance = 0.5  # 5% tolerance around the desired speed
         reward = 0
 
         if not desired_speed - tolerance <= current_speed <= desired_speed + tolerance:
@@ -69,14 +69,18 @@ class CruiseControlEnv(gym.Env):
 
         isEgoStopped = current_speed <= 0.1
         haveEgoReachedMaxSteps = self.steps >= self.MAX_STEPS
+        haveEgoReachedMaxSpeed = current_speed >= 37.0
 
         if isEgoStopped:
             print("Reset: Ego stopped")
         
         if haveEgoReachedMaxSteps:
             print("Reset: Ego reached max steps")
+        
+        if haveEgoReachedMaxSpeed:
+            print("Reset: Ego reached max speed")
 
-        return isEgoStopped or haveEgoReachedMaxSteps
+        return isEgoStopped or haveEgoReachedMaxSteps or haveEgoReachedMaxSpeed
     
     def reset(self, *, seed = None, options = None):
         print("----RESET----")
