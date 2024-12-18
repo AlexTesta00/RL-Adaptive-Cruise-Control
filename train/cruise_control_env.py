@@ -17,7 +17,7 @@ class CruiseControlEnv(gym.Env):
     def __init__(self):
         super(CruiseControlEnv, self).__init__()
         
-        rnd.seed(42)
+        rnd.seed(1234)
 
         self.client, self.world = utility.setup_carla_client()
         self.action_space = self.__action_space()
@@ -42,8 +42,9 @@ class CruiseControlEnv(gym.Env):
         #Spawn ego vehicle
         self.ego_vehicle = utility.spawn_vehicle_bp_at(world=self.world, vehicle=self.VEHICLE_BP, spawn_point=self.SPAWN_POINT)
         random_ego_velocity = physics.kmh_to_ms(rnd.randint(90, 130)) # In m/s
-        self.set_target_speed(random_ego_velocity)
         self.ego_vehicle.set_target_velocity(debug_utility.get_velocity_vector(random_ego_velocity, self.SPAWN_POINT.rotation))
+        self.set_target_speed(random_ego_velocity)
+
 
         #Move spectator to scene
         utility.move_spectator_to(self.spectator, self.ego_vehicle.get_transform())
@@ -54,13 +55,16 @@ class CruiseControlEnv(gym.Env):
     def __compute_reward(self, action):
         current_speed = self.ego_vehicle.get_velocity().length()
         desired_speed = self.target_speed
-        tolerance = 0.5  # 5% tolerance around the desired speed
+        tolerance = 0.1  # 1% tolerance around the desired speed
         reward = 0
 
         if not desired_speed - tolerance <= current_speed <= desired_speed + tolerance:
             reward -= abs(desired_speed - current_speed) / desired_speed
         else:
-            reward += 1
+            if desired_speed - tolerance <= current_speed <= desired_speed + tolerance:
+                reward += 10.0
+            else:
+                reward += 10.0 - abs(desired_speed - current_speed)
 
         return reward
     
