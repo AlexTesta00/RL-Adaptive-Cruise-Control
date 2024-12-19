@@ -35,7 +35,7 @@ env = CruiseControlEnv()
 
 
 # Save the final model
-env.set_target_speed(30)
+env.set_target_speed(30.5556)
 trainedModel = PPO.load("C:/Users/alext/Desktop/RL-Adaptive-Cruise-Control/best_model", env=env)
 # trainedModel.get_env()
 obs = trainedModel.get_env().reset()
