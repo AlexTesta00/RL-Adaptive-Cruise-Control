@@ -13,33 +13,36 @@ env = Monitor(env)
 check_env(env)
 
 # Initialize the PPO model
+
 model = PPO(
-    "MlpPolicy",
+    "MlpPolicy",  # Use an MLP (feed-forward neural network) policy
     env,
     verbose=0,
     gamma=0.95,
-    learning_rate=0.00001,
-    clip_range=0.2,
+    learning_rate=0.00003,
     batch_size=128,
-    n_steps=2048,
+    n_steps=1024,
     n_epochs=100,
     ent_coef=0.01,
     seed=1234,
     tensorboard_log="./log")
 
+
 callback = EvalCallback(env, best_model_save_path='./',
-                        log_path='./', eval_freq=1024 * 100,
+                        log_path='./', eval_freq=1024 * 50,
                         deterministic=True, render=False)
 
 checkpoint_callback = CheckpointCallback(
-  save_freq=1024 * 100,
+  save_freq=1024 * 50,
   save_path="./checkpoint/",
   name_prefix="rl_model",
   save_replay_buffer=True
 )
 
+#model = PPO.load("C:/Users/alext/Desktop/RL-Adaptive-Cruise-Control/model/adaptive_cruise_control_model/best_model", env=env)
+
 # Train the PPO model
-model.learn(total_timesteps=1024 * 100, callback=[callback, checkpoint_callback], progress_bar=True, log_interval=1, tb_log_name="ACC - gamma 0.95, rate 0.00001, clip 0.2, batch 128, step 2048, ent_coef 0.01, epoch 100")
+model.learn(total_timesteps=1024 * 500, callback=[callback, checkpoint_callback], progress_bar=True, log_interval=1, tb_log_name="Adaptive Cruise Control Training")
 
 # Save the final model
 model.save("ppo_adaptive_cruise_control")

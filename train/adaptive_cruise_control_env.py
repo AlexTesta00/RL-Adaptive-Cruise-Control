@@ -13,7 +13,7 @@ class AdaptiveCruiseControlEnv(gym.Env):
     RADAR_RANGE = 100
     DEFAULT_RELATIVE_SPEED = 0
     SPAWN_POINT = carla.Transform(carla.Location(x=2388, y=6164, z=178), carla.Rotation(yaw = -88.2))
-    VEHICLE_BP = 'vehicle.tesla.model3'
+    VEHICLE_BP = 'vehicle.tesla.cybertruck'
     
     def __init__(self):
         super(AdaptiveCruiseControlEnv, self).__init__()
@@ -38,11 +38,11 @@ class AdaptiveCruiseControlEnv(gym.Env):
 
     def __action_space(self):
         #[brake, throttle]
-        return spaces.Box(low=-1.0, high=1.0, dtype=np.float32)
+        return spaces.Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32)
     
     def __observation_space(self):
         #[ego_speed, target_speed, distance, relative_speed, security_distance] distance in m and speed in m/s
-        return spaces.Box(low=np.array([0.0, 25.0, 0.0, -100.0, 0.0], dtype=np.float32), high=np.array([100.0, 40.0, 100, 100.0, 72.0], dtype=np.float32), dtype=np.float32)
+        return spaces.Box(low=np.array([0.0, 25.0, 0.0, -100.0, 0.0], dtype=np.float32), high=np.array([100.0, 40.0, 100, 100.0, 72.0], dtype=np.float32), shape=(5,), dtype=np.float32)
     
     def set_target_speed(self, speed):
         self.target_speed = speed
@@ -52,11 +52,11 @@ class AdaptiveCruiseControlEnv(gym.Env):
     
     def spawn_vehicle(self):
         #Spawn ego vehicle
-        random_offset = rnd.randint(150, 200)
+        random_offset = rnd.randint(50, 100)
         self.ego_vehicle = utility.spawn_vehicle_bp_at(world=self.world, vehicle=self.VEHICLE_BP, spawn_point=self.SPAWN_POINT)
         self.leader_vehicle = utility.spawn_vehicle_bp_in_front_of(world=self.world, vehicle=self.ego_vehicle, vehicle_bp_name=self.VEHICLE_BP, offset=random_offset)
         random_ego_velocity = physics.kmh_to_ms(rnd.randint(90, 110)) # In m/s
-        random_leader_velocity = physics.kmh_to_ms(rnd.randint(90, 110))
+        random_leader_velocity = physics.kmh_to_ms(rnd.randint(50, 70))
         self.ego_vehicle.set_target_velocity(debug_utility.get_velocity_vector(random_ego_velocity, self.SPAWN_POINT.rotation))
         self.leader_vehicle.set_target_velocity(debug_utility.get_velocity_vector(random_leader_velocity, self.SPAWN_POINT.rotation))
         self.set_target_speed(random_ego_velocity)
@@ -68,7 +68,7 @@ class AdaptiveCruiseControlEnv(gym.Env):
         utility.move_spectator_to(self.spectator, self.ego_vehicle.get_transform())
     
     def _spawn_radar(self):
-        self.radar_sensor = utility.spawn_radar(self.world, self.ego_vehicle, range=self.RADAR_RANGE)
+        self.radar_sensor = utility.spawn_radar(self.world, self.ego_vehicle, range=200, horizontal_fov=50, vertical_fov=50)
         self.radar_sensor.listen(self._radar_callback)
     
     def _radar_callback(self, radar_data):
@@ -94,7 +94,7 @@ class AdaptiveCruiseControlEnv(gym.Env):
     def __get_observation(self):
         ego_speed = self.ego_vehicle.get_velocity().length()
         target_speed = self.target_speed
-        distance = self.radar_data["distance"]
+        distance = self.radar_data["distance"] if self.radar_data["distance"] <= self.RADAR_RANGE else self.RADAR_RANGE
         relative_speed = self.radar_data["relative_speed"]
         security_distance = physics.compute_security_distance(physics.ms_to_kmh(ego_speed)) if (distance < self.RADAR_RANGE) else 0.0
         return np.array([ego_speed, target_speed, distance, relative_speed, security_distance], dtype=np.float32)
@@ -111,18 +111,18 @@ class AdaptiveCruiseControlEnv(gym.Env):
         if not isObjectDetected:
             #Penalty for not maintaining speed
             if not isEgoMaintainSpeed:
-                reward -= abs(desired_speed - current_speed) / desired_speed
+                reward -= abs(desired_speed - current_speed) / max(desired_speed, 0.1)
             else:
                 reward += 10.0 - abs(desired_speed - current_speed)
         else:
             #Penalty for security distance
             if not isEgoMaintainSecurityDistance:
-                reward -= abs(distance - security_distance) / security_distance
+                reward -= abs(distance - security_distance) / max(security_distance, 0.1)
             else:
                 reward += 10.0 - abs(distance - security_distance)
             
             #Collision detection
-            if distance <= 1:
+            if distance <= 5:
                 reward -= 10.0
 
         return reward
@@ -132,7 +132,7 @@ class AdaptiveCruiseControlEnv(gym.Env):
         isEgoStopped = current_speed <= 0.1
         haveEgoReachedMaxSpeed = current_speed >= 37.0
         haveEgoReachedMaxSteps = self.steps >= self.MAX_STEPS
-        isInCollisionCase = distance <= 1.0
+        isInCollisionCase = distance <= 5.0
 
         if isEgoStopped:
             print("Reset: Ego stopped")
@@ -147,7 +147,7 @@ class AdaptiveCruiseControlEnv(gym.Env):
             print("Reset: Collision detected")
         
 
-        return isEgoStopped or haveEgoReachedMaxSteps or haveEgoReachedMaxSpeed or isInCollisionCase
+        return isEgoStopped or  haveEgoReachedMaxSteps or haveEgoReachedMaxSpeed or isInCollisionCase #isEgoStopped or 
     
     def reset(self, *, seed = None, options = None):
         print("----RESET----")
